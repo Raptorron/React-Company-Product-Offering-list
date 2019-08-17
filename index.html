@@ -1,0 +1,116 @@
+<html>
+  <head>
+      <script crossorigin src="https://unpkg.com/react@16/umd/react.development.js"></script>
+      <script crossorigin src="https://unpkg.com/react-dom@16/umd/react-dom.development.js"></script>
+      <script>src='https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.0/axios.js'</script>
+  <style>
+    .nav{
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      cursor: pointer;
+    }
+    .selected{
+      background-color: red;
+      padding: 1rem;
+      color: black;
+      border-radius: 10px;
+    }
+
+    </style>
+  </head>
+  <body>
+    <h1>Acme Faker Favorites</h1>
+    <div id='root'></div>
+
+  <script>
+    const { render } = ReactDOM;
+    const { createElement, Component } = React;
+    const root = document.querySelector('#root');
+
+    const Nav = ({products, companies, offerings, page}) => {
+      return createElement('div', {className: 'nav'}, createElement('a', {href: '#home', className: page === 'home' ? 'selected' : ''}, `Home Page`),createElement('a', {href: '#products', className: page === 'products' ? 'selected' : ''}, `Products (${products.length})`), createElement('a', {href: '#companies', className: page === 'companies' ? 'selected' : ''}, `Companies ${companies.length}`), createElement('a', {href: '#offerings', className: page === 'offerings' ? 'selected' : ''}, `Offering Prices (${offerings.length})`))
+    }
+
+    const Home = ({home}) => {
+      return createElement('h1', null, 'Home Page')
+    }
+
+    const Products = ({ products }) => {
+      const lis = products.map( product => createElement('li', { key: product.id}, `${product.name} - ${product.description}`));
+      return createElement('ul', null, lis);
+    }
+
+    const Companies = ({ companies }) => {
+      const lis = companies.map( company => createElement('li', { key: company.id}, company.name));
+      return createElement('ul', null, lis);
+    }
+
+    const Offerings = ({offerings, products}) => {
+      const lis = offerings.map( (company, idx) => createElement('li', {key: idx}, `${company.name} is offering $${company.offering.price} for a product. `));
+      return createElement('ul', null, lis);
+    }
+
+    class App extends Component{
+      constructor(){
+        super();
+        this.state = {
+          products: [],
+          companies: [],
+          offerings: [],
+          page: window.location.hash.slice(1),
+          home: []
+        }
+      }
+      componentDidMount(){
+        if(!window.location.hash.slice(1)){
+          window.location.hash = 'home'
+        }
+
+        window.addEventListener('hashchange', (ev)=>{
+          const page = window.location.hash.slice(1);
+          this.setState({page});
+        })
+        const theProducts = 'https://acme-users-api-rev.herokuapp.com/api/products';
+        const theCompanies = 'https://acme-users-api-rev.herokuapp.com/api/companies';
+        const theOfferings = 'https://acme-users-api-rev.herokuapp.com/api/offerings';
+        Promise.all([fetch(theProducts), fetch(theCompanies), fetch(theOfferings)])
+        .then(responses => Promise.all(responses.map(response => response.json())))
+        .then(results => {
+          const products = results[0];
+          const companies = results[1];
+          const Theofferings = results[2];
+          const offerings = Theofferings.map( offering => {
+            const company = companies.find(company => company.id === offering.companyId);
+            return {...company, offering}
+          })
+          this.setState({ products, companies, offerings })
+        })
+      }
+      render(){
+        const { products, companies, offerings, page, home } = this.state;
+
+        const nav = createElement(Nav, {home, products, companies, offerings, page})
+
+        let dataView;
+        if(page === 'home'){
+          dataView = createElement(Home, {home})
+        }
+        if(page === 'products'){
+          dataView = createElement(Products, {products});
+        }
+        if(page === 'companies'){
+          dataView = createElement(Companies, {companies});
+        }
+        if(page === 'offerings'){
+          dataView = createElement(Offerings, {offerings})
+        }
+
+        return createElement('div', null, nav, dataView)
+      }
+    }
+
+    render(createElement(App), root);
+  </script>
+  </body>
+</html>
